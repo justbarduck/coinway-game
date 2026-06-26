@@ -77,7 +77,6 @@
 <body class="text-slate-200 antialiased">
 
 <div id="gameContainer">
-    <!-- Intro Screen -->
     <div id="introScreen" class="absolute inset-0 z-50 bg-[#02050e] flex flex-col items-center justify-between p-8 transition-all duration-700 ease-out overflow-hidden">
         <div class="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(37,99,235,0.15)_0%,_transparent_65%)] z-0"></div>
         <div class="absolute inset-0 scanline-effect opacity-60 pointer-events-none z-10"></div>
@@ -137,7 +136,6 @@
         </div>
     </div>
 
-    <!-- Garage Screen -->
     <div id="garageScreen" class="absolute inset-0 z-40 flex flex-col p-5 hidden overflow-y-auto hide-scroll pb-24">
         <div class="mt-4 mb-3 px-2 flex justify-between items-center">
             <h1 class="text-2xl font-bold tracking-tight text-white">Garage</h1>
@@ -155,7 +153,6 @@
             </span>
         </div>
 
-        <!-- NPC Race Mode Row -->
         <div class="mb-4">
             <button onclick="showRaceScreen()" class="w-full bento-btn rounded-2xl p-4 flex items-center justify-between shadow-lg border border-fuchsia-500/20 bg-gradient-to-r from-fuchsia-950/20 to-indigo-950/20 hover:from-fuchsia-900/30 hover:to-indigo-900/30 transition-all">
                 <div class="flex items-center gap-3">
@@ -204,7 +201,6 @@
         </button>
     </div>
 
-    <!-- Vehicles Screen -->
     <div id="vehiclesScreen" class="absolute inset-0 z-50 flex flex-col p-5 hidden overflow-y-auto hide-scroll bg-[#040812]">
         <div class="mt-4 mb-6 flex items-center gap-3">
             <button onclick="showGarage()" class="p-2 bg-white/5 rounded-full hover:bg-white/10 transition text-white">
@@ -215,7 +211,6 @@
         <div id="vehiclesList" class="flex flex-col gap-4 pb-10"></div>
     </div>
 
-    <!-- Quests Screen -->
     <div id="questsScreen" class="absolute inset-0 z-50 flex flex-col p-5 hidden overflow-y-auto hide-scroll bg-[#040812]">
         <div class="mt-4 mb-6 flex items-center gap-3">
             <button onclick="showGarage()" class="p-2 bg-white/5 rounded-full hover:bg-white/10 transition text-white">
@@ -238,7 +233,6 @@
         <div id="questsList" class="flex flex-col gap-4 pb-10"></div>
     </div>
 
-    <!-- Race Panel Screen -->
     <div id="raceScreen" class="absolute inset-0 z-50 flex flex-col p-5 hidden overflow-y-auto hide-scroll bg-[#040812]">
         <div class="mt-4 mb-6 flex items-center gap-3">
             <button onclick="showGarage()" class="p-2 bg-white/5 rounded-full hover:bg-white/10 transition text-white">
@@ -261,10 +255,8 @@
         <div id="raceDifficultyList" class="flex flex-col gap-3 pb-10"></div>
     </div>
 
-    <!-- Canvas -->
     <canvas id="gameCanvas"></canvas>
 
-    <!-- HUD -->
     <div id="hud" class="absolute inset-0 pointer-events-none hidden z-30 flex flex-col justify-between">
         <div class="w-full p-4">
             <div class="bento-window p-4 flex flex-col gap-3 pointer-events-auto">
@@ -330,7 +322,6 @@
         </div>
     </div>
 
-    <!-- Modal Overlay -->
     <div id="modalOverlay" class="absolute inset-0 flex flex-col items-center justify-center hidden z-50 p-6 bg-[#040812]/85 backdrop-blur-md">
         <div class="bento-window p-6 w-full max-w-[320px] flex flex-col items-center shadow-[0_0_50px_rgba(0,0,0,0.8)] border border-white/10">
             <h2 id="modalTitle" class="text-2xl font-black text-white mb-1 text-center tracking-wide">Paused</h2>
@@ -395,7 +386,6 @@ let nitroTimer = 0;
 let audioCtx = null;
 let soundEnabled = true;
 
-// Competition state data variables
 let isRacing = false;
 let raceDifficulty = 'normal';
 let raceTimer = 60.0;
@@ -875,7 +865,6 @@ function updatePhysics(dt) {
             return;
         }
         
-        // NPC Behavior mechanics
         const rCfg = RACE_CONFIGS[raceDifficulty];
         npcCrashTimer += dt;
         if (!npcIsCrashed && npcCrashTimer >= rCfg.crashInterval) {
@@ -891,7 +880,6 @@ function updatePhysics(dt) {
         let currentNpcSpeed = npcIsCrashed ? 0 : rCfg.npcSpeed;
         raceNpcDistance += (currentNpcSpeed * dt) / 10;
         
-        // Player Respawn timer tracking
         if (playerRespawnTimer > 0) {
             playerRespawnTimer -= dt;
             if (playerRespawnTimer <= 0) {
@@ -904,7 +892,6 @@ function updatePhysics(dt) {
     const diffConfig = DIFF_SETTINGS[currentDiff];
     const difficultyTime = Math.min(3.5, 1.0 + (runTimer / 60.0));
 
-    // Nitro Logic
     if (isNitroActive) {
         nitroTimer -= dt;
         nitroCharge -= (100 / 4) * dt; 
@@ -922,7 +909,6 @@ function updatePhysics(dt) {
     let speed = (isDamaged ? baseTopSpeed * 0.5 : baseTopSpeed) * difficultyTime * diffConfig.speedMult;
     if (isNitroActive) speed *= 1.8;
 
-    // Force zero player forward speed progression while dead in a competition
     if (isRacing && playerRespawnTimer > 0) {
         speed = 0;
     }
@@ -1181,7 +1167,6 @@ function draw() {
         ctx.stroke();
     }
 
-    // Full screen overlay dark block for active competition respawn sequence
     if (isRacing && playerRespawnTimer > 0) {
         ctx.fillStyle = "rgba(4, 8, 18, 0.6)";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -1396,7 +1381,6 @@ function render3D() {
     fogGradient.addColorStop(0, "#080c1e"); fogGradient.addColorStop(1, "transparent");
     ctx.fillStyle = fogGradient; ctx.fillRect(0, dynamicHorizonY - 60, canvas.width, 140);
 
-    // 3D Rendering of the Semi-Transparent NPC rival opponent vehicle
     if (isRacing) {
         let npcRelDist = raceNpcDistance - racePlayerDistance;
         let npcWorldZ = npcRelDist * 10 + player.worldZ;
@@ -1514,7 +1498,6 @@ function renderTopDown() {
         ctx.restore();
     });
 
-    // Top-down visualization structure for NPC opponent vehicle positioning
     if (isRacing) {
         let sx = canvas.width / 2 + 45;
         let sy = canvas.height * 0.82 - (raceNpcDistance - racePlayerDistance) * 1.3;
