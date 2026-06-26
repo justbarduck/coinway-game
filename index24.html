@@ -1,0 +1,1823 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Coinway</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght=400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        body, html { 
+            margin: 0; padding: 0; overflow: hidden; background-color: #000; 
+            touch-action: none; user-select: none; font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        #gameContainer { 
+            max-width: 500px; margin: 0 auto; position: relative; height: 100vh; 
+            background: #040812; overflow: hidden; box-shadow: 0 0 40px rgba(0,0,0,0.8);
+        }
+        canvas { display: block; width: 100%; height: 100%; }
+        
+        .bento-window {
+            background: rgba(18, 25, 40, 0.65);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+            border-radius: 24px;
+        }
+        
+        .bento-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+        .bento-btn:active { transform: scale(0.96); background: rgba(255, 255, 255, 0.1); }
+        
+        .progress-track { background: rgba(0, 0, 0, 0.4); border-radius: 999px; overflow: hidden; height: 6px; }
+        .progress-fill { height: 100%; border-radius: 999px; transition: width 0.3s ease, background-color 0.3s ease; }
+
+        .hide-scroll::-webkit-scrollbar { display: none; }
+        .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+
+        @keyframes scanline {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(100%); }
+        }
+        .scanline-effect {
+            animation: scanline 8s linear infinite;
+            background: linear-gradient(to bottom, rgba(59,130,246,0) 0%, rgba(59,130,246,0.15) 10%, rgba(59,130,246,0) 20%);
+        }
+        @keyframes pulse-glow {
+            0%, 100% { opacity: 0.3; transform: scale(0.98); }
+            50% { opacity: 0.8; transform: scale(1.02); }
+        }
+        .pulsing-glow {
+            animation: pulse-glow 3s ease-in-out infinite;
+        }
+        
+        #btnNitro {
+            transition: all 0.2s ease;
+        }
+        #btnNitro.nitro-ready {
+            box-shadow: 0 0 20px rgba(217, 70, 239, 0.6);
+            animation: pulse-glow 2s infinite;
+        }
+        #btnNitro.nitro-active {
+            background: rgba(217, 70, 239, 0.3);
+            border-color: rgba(217, 70, 239, 0.8);
+            transform: scale(0.95);
+        }
+        
+        #nitroCircleProgress {
+            transition: stroke-dashoffset 0.1s linear;
+        }
+    </style>
+</head>
+<body class="text-slate-200 antialiased">
+
+<div id="gameContainer">
+    <!-- Intro Screen -->
+    <div id="introScreen" class="absolute inset-0 z-50 bg-[#02050e] flex flex-col items-center justify-between p-8 transition-all duration-700 ease-out overflow-hidden">
+        <div class="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(37,99,235,0.15)_0%,_transparent_65%)] z-0"></div>
+        <div class="absolute inset-0 scanline-effect opacity-60 pointer-events-none z-10"></div>
+        <div class="absolute inset-0 bg-[linear-gradient(rgba(18,24,38,0.2)_1px,_transparent_1px),_linear-gradient(90deg,_rgba(18,24,38,0.2)_1px,_transparent_1px)] bg-[size:20px_20px] pointer-events-none"></div>
+
+        <div class="w-full flex justify-between items-center text-[10px] font-mono text-blue-500/65 tracking-widest z-20 mt-4">
+            <div>SYSTEM: ONLINE</div>
+            <div class="animate-pulse">SYS_BOOT_OK v4.0</div>
+        </div>
+
+        <div class="relative flex flex-col items-center justify-center z-20 my-auto w-full">
+            <div class="absolute w-72 h-72 border border-blue-500/20 rounded-full pulsing-glow flex items-center justify-center pointer-events-none">
+                <div class="w-60 h-60 border border-blue-500/10 rounded-full"></div>
+            </div>
+
+            <div class="mb-6 filter drop-shadow-[0_0_15px_rgba(59,130,246,0.3)] animate-bounce duration-1000">
+                <svg class="w-64 h-32 text-blue-400" viewBox="0 0 512 256" fill="currentColor">
+                    <path d="M40 90h48v16H40zm0 16h8v48h-8z" opacity="0.8"/>
+                    <rect x="32" y="70" width="76" height="20" rx="4" fill="#3b82f6"/>
+                    <path d="M80 150 L120 120 L260 110 L380 135 L470 165 L480 180 L120 180 Z" fill="url(#carGrad)"/>
+                    <path d="M220 110 L250 85 L280 85 L300 110 Z" fill="#1e3a8a"/>
+                    <path d="M255 90 L275 90 L290 110 L250 110 Z" fill="#60a5fa"/>
+                    <rect x="440" y="170" width="60" height="15" rx="3" fill="#3b82f6"/>
+                    <circle cx="125" cy="180" r="38" fill="#090d16" stroke="#1e293b" stroke-width="4"/>
+                    <circle cx="125" cy="180" r="18" fill="#1e3a8a"/>
+                    <circle cx="395" cy="180" r="38" fill="#090d16" stroke="#1e293b" stroke-width="4"/>
+                    <circle cx="395" cy="180" r="18" fill="#1e3a8a"/>
+                    <circle cx="125" cy="180" r="6" fill="#f59e0b"/>
+                    <circle cx="395" cy="180" r="6" fill="#f59e0b"/>
+                    <defs>
+                        <linearGradient id="carGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#1d4ed8" />
+                            <stop offset="100%" stop-color="#3b82f6" />
+                        </linearGradient>
+                    </defs>
+                </svg>
+            </div>
+
+            <div class="px-8 mb-2">
+                <h1 class="text-5xl md:text-6xl font-black italic tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-white via-blue-300 to-blue-500 drop-shadow-[0_0_30px_rgba(59,130,246,0.6)] text-center leading-none">
+                    COINWAY
+                </h1>
+            </div>
+
+            <div class="flex items-center gap-4">
+                <div class="w-12 h-[1px] bg-gradient-to-r from-transparent to-blue-500"></div>
+                <p class="text-blue-400 text-[10px] font-mono tracking-[0.4em] uppercase">Ready to Race</p>
+                <div class="w-12 h-[1px] bg-gradient-to-l from-transparent to-blue-500"></div>
+            </div>
+        </div>
+
+        <div class="w-full flex flex-col items-center z-20 mb-6">
+            <button id="btnEnterEngine" class="w-full max-w-[280px] bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold py-4 px-6 rounded-2xl tracking-widest text-[13px] uppercase shadow-[0_0_30px_rgba(37,99,235,0.4)] active:scale-[0.96] transition-all border border-blue-400/30">
+                Start Engine
+            </button>
+            <p class="text-[9px] text-slate-500 font-medium tracking-[0.2em] uppercase mt-4">© 2026 BARDUCK STUDIO</p>
+        </div>
+    </div>
+
+    <!-- Garage Screen -->
+    <div id="garageScreen" class="absolute inset-0 z-40 flex flex-col p-5 hidden overflow-y-auto hide-scroll pb-24">
+        <div class="mt-4 mb-3 px-2 flex justify-between items-center">
+            <h1 class="text-2xl font-bold tracking-tight text-white">Garage</h1>
+            <button id="btnToggleSound" onclick="toggleSound()" class="p-2 bg-white/10 rounded-full hover:bg-white/20 transition text-white">
+                <svg id="iconSoundOn" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5 10v4a2 2 0 002 2h2.586l3.707 3.707A1 1 0 0015 19V5a1 1 0 00-1.707-.707L9.586 8H7a2 2 0 00-2 2z"></path></svg>
+                <svg id="iconSoundOff" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" clip-rule="evenodd"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"></path></svg>
+            </button>
+        </div>
+
+        <div class="bento-window p-4 mb-4 flex justify-between items-center">
+            <span class="text-slate-400 text-xs font-medium uppercase tracking-wider">Balance</span>
+            <span class="text-2xl font-bold text-white flex items-center gap-2">
+                <span id="garageCoins">0</span> 
+                <span class="text-blue-400 text-xl">◈</span>
+            </span>
+        </div>
+
+        <!-- NPC Race Mode Row -->
+        <div class="mb-4">
+            <button onclick="showRaceScreen()" class="w-full bento-btn rounded-2xl p-4 flex items-center justify-between shadow-lg border border-fuchsia-500/20 bg-gradient-to-r from-fuchsia-950/20 to-indigo-950/20 hover:from-fuchsia-900/30 hover:to-indigo-900/30 transition-all">
+                <div class="flex items-center gap-3">
+                    <svg class="w-8 h-8 text-fuchsia-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                    <div class="text-left">
+                        <span class="text-xs font-bold text-white uppercase tracking-wider block">NPC Race Mode</span>
+                        <span class="text-[10px] text-slate-400">Challenge rivals for high rewards</span>
+                    </div>
+                </div>
+                <span id="garageRaceAttempts" class="text-xs font-bold text-fuchsia-400 bg-fuchsia-500/10 px-2.5 py-1 rounded-lg border border-fuchsia-500/20">3/3</span>
+            </button>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 mb-5">
+            <button onclick="showVehiclesScreen()" class="bento-btn rounded-2xl p-4 flex flex-col items-center justify-center gap-2 shadow-lg">
+                <svg class="w-8 h-8 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
+                <span class="text-xs font-bold text-white uppercase tracking-wider">Vehicles</span>
+            </button>
+            <button onclick="showQuestsScreen()" class="bento-btn rounded-2xl p-4 flex flex-col items-center justify-center gap-2 shadow-lg relative">
+                <svg class="w-8 h-8 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                <span class="text-xs font-bold text-white uppercase tracking-wider">Quests</span>
+            </button>
+        </div>
+
+        <div class="mb-4">
+            <div class="flex justify-between items-end px-1 mb-2">
+                <span class="text-slate-400 text-xs font-medium uppercase tracking-wider">Difficulty (Endless Mode)</span>
+                <span id="diffDesc" class="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-1 rounded-lg">Reward x1.0</span>
+            </div>
+            <div class="bento-window p-1.5 flex gap-1.5">
+                <button id="btnDiffEasy" onclick="setDifficulty('easy')" class="diff-btn flex-1 py-2.5 rounded-xl text-xs font-bold text-slate-400 transition-all hover:bg-white/5 active:scale-95">Easy</button>
+                <button id="btnDiffNormal" onclick="setDifficulty('normal')" class="diff-btn flex-1 py-2.5 rounded-xl text-xs font-bold bg-white/10 text-white shadow-md transition-all active:scale-95">Normal</button>
+                <button id="btnDiffHard" onclick="setDifficulty('hard')" class="diff-btn flex-1 py-2.5 rounded-xl text-xs font-bold text-slate-400 transition-all hover:bg-white/5 active:scale-95">Extreme</button>
+            </div>
+        </div>
+
+        <div class="px-1 mb-2 mt-2">
+            <span class="text-slate-400 text-xs font-medium uppercase tracking-wider">Modules (current car)</span>
+        </div>
+        <div id="garageUpgrades" class="grid grid-cols-2 gap-3 w-full mb-6"></div>
+    </div>
+    
+    <div id="floatingStartBtn" class="absolute bottom-6 left-5 right-5 z-40 hidden">
+        <button id="btnStartGame" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-4 rounded-2xl transition-all tracking-wide text-[15px] shadow-[0_8px_20px_rgba(37,99,235,0.4)] active:scale-[0.98]">
+            Start Endless Race
+        </button>
+    </div>
+
+    <!-- Vehicles Screen -->
+    <div id="vehiclesScreen" class="absolute inset-0 z-50 flex flex-col p-5 hidden overflow-y-auto hide-scroll bg-[#040812]">
+        <div class="mt-4 mb-6 flex items-center gap-3">
+            <button onclick="showGarage()" class="p-2 bg-white/5 rounded-full hover:bg-white/10 transition text-white">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+            </button>
+            <h1 class="text-2xl font-bold tracking-tight text-white">Vehicles</h1>
+        </div>
+        <div id="vehiclesList" class="flex flex-col gap-4 pb-10"></div>
+    </div>
+
+    <!-- Quests Screen -->
+    <div id="questsScreen" class="absolute inset-0 z-50 flex flex-col p-5 hidden overflow-y-auto hide-scroll bg-[#040812]">
+        <div class="mt-4 mb-6 flex items-center gap-3">
+            <button onclick="showGarage()" class="p-2 bg-white/5 rounded-full hover:bg-white/10 transition text-white">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+            </button>
+            <h1 class="text-2xl font-bold tracking-tight text-white">Quests</h1>
+        </div>
+        
+        <div class="bento-window p-4 mb-6">
+            <div class="flex justify-between items-center mb-2">
+                <span class="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Total Distance</span>
+                <span id="questTotalDist" class="text-sm font-bold text-white">0 m</span>
+            </div>
+            <div class="flex justify-between items-center">
+                <span class="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Total Earnings</span>
+                <span id="questTotalCoins" class="text-sm font-bold text-yellow-400">0 ◈</span>
+            </div>
+        </div>
+
+        <div id="questsList" class="flex flex-col gap-4 pb-10"></div>
+    </div>
+
+    <!-- Race Panel Screen -->
+    <div id="raceScreen" class="absolute inset-0 z-50 flex flex-col p-5 hidden overflow-y-auto hide-scroll bg-[#040812]">
+        <div class="mt-4 mb-6 flex items-center gap-3">
+            <button onclick="showGarage()" class="p-2 bg-white/5 rounded-full hover:bg-white/10 transition text-white">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+            </button>
+            <h1 class="text-2xl font-bold tracking-tight text-white">NPC Competitions</h1>
+        </div>
+        
+        <div class="bento-window p-4 mb-4 flex justify-between items-center">
+            <span class="text-slate-400 text-xs font-medium uppercase tracking-wider">Attempts Available</span>
+            <span id="raceAttemptsText" class="text-lg font-bold text-fuchsia-400 bg-fuchsia-500/10 px-3 py-1 rounded-xl border border-fuchsia-500/20">3/3</span>
+        </div>
+        
+        <div id="raceCooldownContainer" class="bento-window p-3 mb-4 border border-rose-500/20 bg-rose-500/5 rounded-xl hidden">
+            <p class="text-xs text-rose-400 font-semibold text-center uppercase tracking-wider">
+                Refreshes in: <span id="raceCooldownTimer" class="font-mono ml-1">04:00:00</span>
+            </p>
+        </div>
+
+        <div id="raceDifficultyList" class="flex flex-col gap-3 pb-10"></div>
+    </div>
+
+    <!-- Canvas -->
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- HUD -->
+    <div id="hud" class="absolute inset-0 pointer-events-none hidden z-30 flex flex-col justify-between">
+        <div class="w-full p-4">
+            <div class="bento-window p-4 flex flex-col gap-3 pointer-events-auto">
+                <div class="flex justify-between items-center">
+                    <div class="flex gap-4">
+                        <div class="flex items-center gap-1.5 bg-white/5 px-3 py-1.5 rounded-lg border border-white/5">
+                            <span class="text-blue-400 text-sm font-bold">◈</span>
+                            <span id="hudCoins" class="font-bold text-white text-sm">0</span>
+                        </div>
+                        <div class="flex items-center gap-1 px-2 py-1.5">
+                            <span id="hudDist" class="font-semibold text-slate-300 text-sm tracking-wide">0 m</span>
+                        </div>
+                    </div>
+                    
+                    <div class="flex gap-2">
+                        <button id="btnToggleCamera" class="bento-btn rounded-xl px-3 py-1.5 text-xs font-medium flex items-center gap-1 cursor-pointer">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                            View
+                        </button>
+                        <button id="btnPause" class="bento-btn rounded-xl px-2.5 py-1.5 text-xs flex items-center justify-center cursor-pointer">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Live Competition HUD Info Line Overlay -->
+                <div id="raceHudOverlay" class="hidden flex justify-between items-center bg-fuchsia-950/40 border border-fuchsia-500/20 rounded-xl px-3 py-2 mt-1">
+                    <div class="text-xs font-bold text-fuchsia-400 font-mono tracking-wider flex items-center gap-1">
+                        <span class="animate-pulse text-sm">⏱</span> TIME LEFT: <span id="raceTimerText">60.0s</span>
+                    </div>
+                    <div class="text-[11px] font-bold text-slate-300 tracking-wide font-mono">
+                        YOU: <span id="racePlayerDistText" class="text-blue-400">0m</span> / OPPONENT: <span id="raceNpcDistText" class="text-purple-400">0m</span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-2 pt-1">
+                    <div class="flex flex-col gap-1.5">
+                        <div class="flex justify-between text-[9px] font-medium text-slate-400"><span>ENERGY</span></div>
+                        <div class="progress-track"><div id="barFuel" class="progress-fill bg-emerald-400" style="width: 100%"></div></div>
+                    </div>
+                    <div class="flex flex-col gap-1.5">
+                        <div class="flex justify-between text-[9px] font-medium text-slate-400"><span>INTEGRITY</span></div>
+                        <div class="progress-track"><div id="barTire" class="progress-fill bg-blue-500" style="width: 100%"></div></div>
+                    </div>
+                    <div class="flex flex-col gap-1.5">
+                        <div class="flex justify-between text-[9px] font-medium text-slate-400"><span class="text-fuchsia-400">NITRO</span></div>
+                        <div class="progress-track"><div id="barNitro" class="progress-fill bg-fuchsia-500" style="width: 0%"></div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="w-full p-6 flex justify-end pb-8 pointer-events-auto">
+            <div class="relative w-20 h-20 flex items-center justify-center pointer-events-auto">
+                <svg class="absolute inset-0 w-full h-full transform -rotate-90 pointer-events-none" viewBox="0 0 80 80">
+                    <circle cx="40" cy="40" r="35" class="stroke-white/10" stroke-width="4" fill="none" />
+                    <circle id="nitroCircleProgress" cx="40" cy="40" r="35" class="stroke-fuchsia-500" stroke-width="4" fill="none" stroke-dasharray="219.9" stroke-dashoffset="219.9" stroke-linecap="round" />
+                </svg>
+                <button id="btnNitro" class="w-16 h-16 rounded-full bg-black/40 border border-white/10 backdrop-blur-md flex items-center justify-center text-white opacity-50 transition-all relative z-10 outline-none">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Overlay -->
+    <div id="modalOverlay" class="absolute inset-0 flex flex-col items-center justify-center hidden z-50 p-6 bg-[#040812]/85 backdrop-blur-md">
+        <div class="bento-window p-6 w-full max-w-[320px] flex flex-col items-center shadow-[0_0_50px_rgba(0,0,0,0.8)] border border-white/10">
+            <h2 id="modalTitle" class="text-2xl font-black text-white mb-1 text-center tracking-wide">Paused</h2>
+            <p id="modalDesc" class="text-blue-400 mb-6 text-[11px] text-center font-mono uppercase tracking-widest">Awaiting Commands...</p>
+            
+            <div id="modalStats" class="w-full bg-black/40 p-4 rounded-2xl border border-white/5 mb-6 text-center hidden shadow-inner">
+                <div class="grid grid-cols-2 gap-3 mb-3">
+                    <div class="bg-white/5 p-2 rounded-xl">
+                        <p class="text-[9px] text-slate-400 uppercase tracking-widest mb-1">Distance</p>
+                        <p class="text-xl font-bold text-white"><span id="statDist">0</span><span class="text-xs text-slate-500 ml-1">m</span></p>
+                    </div>
+                    <div class="bg-white/5 p-2 rounded-xl">
+                        <p class="text-[9px] text-slate-400 uppercase tracking-widest mb-1">Earned</p>
+                        <p class="text-xl font-bold text-yellow-400"><span id="statCoins">0</span><span class="text-xs text-yellow-600/50 ml-1">◈</span></p>
+                    </div>
+                </div>
+                <div class="bg-white/5 p-2 rounded-xl flex justify-between px-4">
+                    <p class="text-[10px] text-slate-400 uppercase tracking-widest">Max Speed</p>
+                    <p class="text-[11px] font-bold text-emerald-400"><span id="statSpeed">0</span> km/h</p>
+                </div>
+            </div>
+            
+            <button id="btnPrimary" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3.5 rounded-xl transition-all text-[14px] mb-3 active:scale-[0.98] shadow-[0_4px_15px_rgba(37,99,235,0.4)]">
+                Resume
+            </button>
+            <button id="btnSecondary" class="w-full bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 font-bold py-3.5 rounded-xl text-[14px] transition-all active:scale-[0.98]">
+                Garage
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d', { alpha: false });
+
+let state = 'intro'; 
+let cameraMode = '3d'; 
+let lastTime = 0;
+let runTimer = 0, spawnTimer = 0;
+let distance = 0, runCoins = 0, frameCoinsFraction = 0;
+let currentDiff = 'normal';
+let maxSpeedReached = 0;
+
+let player = { x: 0, worldZ: 153, width: 32, height: 52, fuel: 0, tire: 0 };
+let targetX = 0; 
+let smoothRoll = 0; 
+let dynamicHorizonY = 380;
+
+let stars = [];
+let meteors = [];
+let clouds = [];
+let roadsideScenery = []; 
+let entities = [];
+let popups = []; 
+let visualShake = 0;
+
+let nitroCharge = 0;
+let isNitroActive = false;
+let nitroTimer = 0;
+
+let audioCtx = null;
+let soundEnabled = true;
+
+// Competition state data variables
+let isRacing = false;
+let raceDifficulty = 'normal';
+let raceTimer = 60.0;
+let racePlayerDistance = 0;
+let raceNpcDistance = 0;
+let playerRespawnTimer = 0;
+let npcCrashTimer = 0;
+let npcIsCrashed = false;
+let npcCrashDuration = 0;
+
+const CARS = {
+    'starter': { name: 'Starter', price: 0, color: '#E2E8F0', mults: { speed: 1.0, fuel: 1.0, tire: 1.0, income: 1.0 } },
+    'supercar': { name: 'Supercar', price: 15000, color: '#F59E0B', mults: { speed: 1.25, fuel: 1.2, tire: 1.1, income: 1.5 } },
+    'f1': { name: 'Formula F1', price: 50000, color: '#EF4444', mults: { speed: 1.7, fuel: 1.4, tire: 1.0, income: 2.5 } },
+    'hovercar': { name: 'Hovercar', price: 120000, color: '#8B5CF6', mults: { speed: 2.0, fuel: 1.6, tire: 1.0, income: 3.0 } }
+};
+
+const RACE_CONFIGS = {
+    'easy': { name: 'Easy', npcCar: 'starter', npcSpeed: 450, crashInterval: 12, rewardFirst: 800, rewardNext: 300 },
+    'normal': { name: 'Normal', npcCar: 'supercar', npcSpeed: 560, crashInterval: 22, rewardFirst: 1200, rewardNext: 600 },
+    'hard': { name: 'Hard', npcCar: 'f1', npcSpeed: 740, crashInterval: 35, rewardFirst: 1600, rewardNext: 900 },
+    'expert': { name: 'Expert', npcCar: 'hovercar', npcSpeed: 880, crashInterval: 99999, rewardFirst: 2000, rewardNext: 1200 }
+};
+
+const QUESTS = [
+    { id: 'q1', desc: 'Travel 25,000 meters', type: 'distance', target: 25000, reward: 5000 },
+    { id: 'q2', desc: 'Earn 15,000 coins', type: 'coins', target: 15000, reward: 5000 },
+    { id: 'q3', desc: 'Travel 50,000 meters', type: 'distance', target: 50000, reward: 10000 },
+    { id: 'q4', desc: 'Earn 50,000 coins', type: 'coins', target: 50000, reward: 18000 },
+    { id: 'q5', desc: 'Travel 100,000 meters', type: 'distance', target: 100000, reward: 20000 },
+    { id: 'q6', desc: 'Earn 100,000 coins', type: 'coins', target: 100000, reward: 35000 }
+];
+
+const CONFIG = {
+    baseSpeed: 450, 
+    baseFuel: 100, baseTire: 100,
+    fuelDrain: 4.5, tireDrain: 0.5, tirePenalty: 25,
+    laneLimits: { min: -110, max: 110 },
+    upgrades: {
+        engine: { id: 'engine', name: "Engine", baseCost: 30, scale: 1.3, effect: 40, colSpan: false, icon: '<svg class="w-10 h-10 text-indigo-400 opacity-85" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>' },
+        fuel:   { id: 'fuel', name: "Battery", baseCost: 25, scale: 1.3, effect: 30, colSpan: false, icon: '<svg class="w-10 h-10 text-emerald-400 opacity-85" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 10.5h-1.5V9a2 2 0 00-2-2h-11a2 2 0 00-2 2v6a2 2 0 002 2h11a2 2 0 002-2v-1.5H21v-3zM6.5 10h5v4h-5v-4z"></path></svg>' },
+        tires:  { id: 'tires', name: "Hull Integrity", baseCost: 30, scale: 1.3, effect: 30, colSpan: false, icon: '<svg class="w-10 h-10 text-blue-400 opacity-85" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>' },
+        magnet: { id: 'magnet', name: "Magnet", baseCost: 50, scale: 1.4, effect: 45, colSpan: false, icon: '<svg class="w-10 h-10 text-purple-400 opacity-85" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"></path></svg>' },
+        income: { id: 'income', name: "Coin Multiplier", baseCost: 80, scale: 1.6, effect: 0.5, colSpan: true, icon: '<svg class="w-9 h-9 text-yellow-400 opacity-85" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>' }
+    }
+};
+
+const DIFF_SETTINGS = {
+    'easy':   { speedMult: 0.8,  rewardMult: 0.5 },
+    'normal': { speedMult: 1.0,  rewardMult: 1.0 },
+    'hard':   { speedMult: 1.35, rewardMult: 2.0 }
+};
+
+let saveData = { 
+    coins: 0, 
+    totalDistance: 0,
+    totalCoinsEarned: 0,
+    claimedQuests: [],
+    lastDiff: 'normal', 
+    currentCar: 'starter',
+    sound: true,
+    raceAttempts: 3,
+    raceCooldownStart: null,
+    raceWins: { easy: 0, normal: 0, hard: 0, expert: 0 },
+    cars: {
+        'starter': { purchased: true, upgrades: { engine: 0, fuel: 0, tires: 0, magnet: 0, income: 0 } },
+        'supercar': { purchased: false, upgrades: { engine: 0, fuel: 0, tires: 0, magnet: 0, income: 0 } },
+        'f1': { purchased: false, upgrades: { engine: 0, fuel: 0, tires: 0, magnet: 0, income: 0 } },
+        'hovercar': { purchased: false, upgrades: { engine: 0, fuel: 0, tires: 0, magnet: 0, income: 0 } }
+    }
+};
+
+const focalLength = 320; 
+const cameraHeight = 130; 
+
+const els = {
+    intro: document.getElementById('introScreen'),
+    garage: document.getElementById('garageScreen'),
+    vehicles: document.getElementById('vehiclesScreen'),
+    quests: document.getElementById('questsScreen'),
+    race: document.getElementById('raceScreen'),
+    hud: document.getElementById('hud'),
+    overlay: document.getElementById('modalOverlay'),
+    upgrades: document.getElementById('garageUpgrades'),
+    vehiclesList: document.getElementById('vehiclesList'),
+    questsList: document.getElementById('questsList'),
+    startBtnWrap: document.getElementById('floatingStartBtn')
+};
+
+function initAudio() {
+    if(!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+}
+
+function playSound(type) {
+    if (!soundEnabled || !audioCtx) return;
+    const t = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    if (type === 'coin') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(880, t); 
+        osc.frequency.exponentialRampToValueAtTime(1760, t + 0.1); 
+        gain.gain.setValueAtTime(0.3, t);
+        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.1);
+        osc.start(t);
+        osc.stop(t + 0.1);
+    } else if (type === 'crash') {
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(150, t);
+        osc.frequency.exponentialRampToValueAtTime(40, t + 0.3);
+        gain.gain.setValueAtTime(0.5, t);
+        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.3);
+        osc.start(t);
+        osc.stop(t + 0.3);
+    } else if (type === 'nitro') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(200, t);
+        osc.frequency.linearRampToValueAtTime(600, t + 0.5);
+        gain.gain.setValueAtTime(0.4, t);
+        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.5);
+        
+        const filter = audioCtx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.setValueAtTime(400, t);
+        filter.frequency.linearRampToValueAtTime(2000, t + 0.5);
+        filter.Q.value = 3;
+        
+        osc.disconnect();
+        osc.connect(filter);
+        filter.connect(gain);
+        
+        osc.start(t);
+        osc.stop(t + 0.5);
+    } else if (type === 'click') {
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(400, t);
+        osc.frequency.exponentialRampToValueAtTime(200, t + 0.05);
+        gain.gain.setValueAtTime(0.2, t);
+        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.05);
+        osc.start(t);
+        osc.stop(t + 0.05);
+    }
+}
+
+function toggleSound() {
+    saveData.sound = !saveData.sound;
+    soundEnabled = saveData.sound;
+    saveGame();
+    updateSoundIcon();
+    if(soundEnabled) { initAudio(); playSound('click'); }
+}
+
+function updateSoundIcon() {
+    document.getElementById('iconSoundOn').classList.toggle('hidden', !soundEnabled);
+    document.getElementById('iconSoundOff').classList.toggle('hidden', soundEnabled);
+}
+
+function resizeCanvas() {
+    const container = document.getElementById('gameContainer');
+    canvas.width = container.clientWidth;
+    canvas.height = container.clientHeight;
+    dynamicHorizonY = canvas.height * 0.44; 
+}
+
+function init() {
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+    loadData();
+    soundEnabled = saveData.sound !== false; 
+    updateSoundIcon();
+    setDifficulty(saveData.lastDiff || 'normal'); 
+    setupInput();
+    setupButtons();
+
+    stars = [];
+    for (let i = 0; i < 50; i++) {
+        stars.push({
+            x: Math.random(),
+            y: Math.random() * 0.45,
+            size: 0.6 + Math.random() * 1.5,
+            alpha: 0.2 + Math.random() * 0.8,
+            phase: Math.random() * Math.PI * 2
+        });
+    }
+
+    clouds = [];
+    for (let i = 0; i < 6; i++) {
+        clouds.push({
+            x: Math.random() * (canvas.width || 500),
+            y: 35 + Math.random() * 75,
+            scale: 0.7 + Math.random() * 1.3,
+            speed: 8 + Math.random() * 14
+        });
+    }
+
+    requestAnimationFrame(gameLoop);
+}
+
+function loadData() {
+    try {
+        const saved = localStorage.getItem('coinwayConfigV4');
+        if (saved) {
+            let parsed = JSON.parse(saved);
+            saveData = { ...saveData, ...parsed };
+        }
+    } catch(e) { console.warn("Could not load save data", e); }
+    saveData.totalDistance = saveData.totalDistance || 0;
+    saveData.totalCoinsEarned = saveData.totalCoinsEarned || 0;
+    saveData.claimedQuests = saveData.claimedQuests || [];
+    saveData.raceAttempts = saveData.raceAttempts !== undefined ? saveData.raceAttempts : 3;
+    saveData.raceCooldownStart = saveData.raceCooldownStart || null;
+    saveData.raceWins = saveData.raceWins || { easy: 0, normal: 0, hard: 0, expert: 0 };
+}
+function saveGame() { 
+    try { localStorage.setItem('coinwayConfigV4', JSON.stringify(saveData)); } catch(e) {}
+}
+
+function checkRaceCooldown() {
+    if (saveData.raceAttempts < 3 && saveData.raceCooldownStart) {
+        let elapsed = Date.now() - saveData.raceCooldownStart;
+        let cooldownMs = 4 * 60 * 60 * 1000;
+        if (elapsed >= cooldownMs) {
+            saveData.raceAttempts = 3;
+            saveData.raceCooldownStart = null;
+            saveGame();
+        }
+    }
+}
+
+function updateRaceCooldownUI() {
+    checkRaceCooldown();
+    const container = document.getElementById('raceCooldownContainer');
+    if (saveData.raceAttempts < 3 && saveData.raceCooldownStart) {
+        container.classList.remove('hidden');
+        let elapsed = Date.now() - saveData.raceCooldownStart;
+        let cooldownMs = 4 * 60 * 60 * 1000;
+        let remaining = Math.max(0, cooldownMs - elapsed);
+        
+        let diffSecs = Math.floor(remaining / 1000);
+        let h = Math.floor(diffSecs / 3600).toString().padStart(2, '0');
+        let m = Math.floor((diffSecs % 3600) / 60).toString().padStart(2, '0');
+        let s = (diffSecs % 60).toString().padStart(2, '0');
+        document.getElementById('raceCooldownTimer').innerText = `${h}:${m}:${s}`;
+    } else {
+        container.classList.add('hidden');
+    }
+    document.getElementById('raceAttemptsText').innerText = `${saveData.raceAttempts}/3`;
+}
+
+function setDifficulty(diff) {
+    currentDiff = diff; saveData.lastDiff = diff; saveGame();
+    document.querySelectorAll('.diff-btn').forEach(b => {
+        b.classList.remove('bg-white/10', 'text-white', 'shadow-md');
+        b.classList.add('text-slate-400');
+    });
+    let activeBtn = document.getElementById(diff === 'easy' ? 'btnDiffEasy' : diff === 'normal' ? 'btnDiffNormal' : 'btnDiffHard');
+    if(activeBtn) {
+        activeBtn.classList.remove('text-slate-400');
+        activeBtn.classList.add('bg-white/10', 'text-white', 'shadow-md');
+    }
+    let desc = document.getElementById('diffDesc');
+    desc.innerText = `Reward x${DIFF_SETTINGS[diff].rewardMult.toFixed(1)}`;
+    desc.className = "text-[10px] font-bold px-2 py-1 rounded-lg border " + 
+        (diff === 'easy' ? "text-slate-400 bg-slate-500/10 border-slate-500/20" : 
+         diff === 'normal' ? "text-emerald-400 bg-emerald-500/10 border-emerald-500/20" : 
+         "text-rose-400 bg-rose-500/10 border-rose-500/20");
+    if(state === 'garage') playSound('click');
+}
+
+function gameLoop(timestamp) {
+    let dt = Math.min((timestamp - lastTime) / 1000, 0.1); 
+    lastTime = timestamp;
+
+    if (state === 'playing') {
+        updatePhysics(dt); draw();
+    } else if (state === 'garage' || state === 'vehicles' || state === 'quests' || state === 'race') {
+        drawStaticGrid();
+        if (state === 'race') {
+            updateRaceCooldownUI();
+        }
+    }
+    requestAnimationFrame(gameLoop);
+}
+
+function hideAllScreens() {
+    els.garage.classList.add('hidden');
+    els.vehicles.classList.add('hidden');
+    els.quests.classList.add('hidden');
+    els.race.classList.add('hidden');
+    els.hud.classList.add('hidden'); 
+    els.overlay.classList.add('hidden');
+    els.startBtnWrap.classList.add('hidden');
+}
+
+function showGarage() {
+    state = 'garage';
+    hideAllScreens();
+    els.garage.classList.remove('hidden');
+    els.startBtnWrap.classList.remove('hidden');
+    checkRaceCooldown();
+    document.getElementById('garageCoins').innerText = saveData.coins;
+    document.getElementById('garageRaceAttempts').innerText = `${saveData.raceAttempts}/3`;
+    renderGarageUpgrades();
+}
+
+function showVehiclesScreen() {
+    state = 'vehicles';
+    hideAllScreens();
+    els.vehicles.classList.remove('hidden');
+    renderVehicles();
+}
+
+function showQuestsScreen() {
+    state = 'quests';
+    hideAllScreens();
+    els.quests.classList.remove('hidden');
+    document.getElementById('questTotalDist').innerText = Math.floor(saveData.totalDistance) + " m";
+    document.getElementById('questTotalCoins').innerText = saveData.totalCoinsEarned + " ◈";
+    renderQuests();
+}
+
+function showRaceScreen() {
+    state = 'race';
+    hideAllScreens();
+    els.race.classList.remove('hidden');
+    updateRaceCooldownUI();
+    renderRaceDifficulties();
+}
+
+function startNpcRace(diffKey) {
+    checkRaceCooldown();
+    if(saveData.raceAttempts <= 0) return;
+    
+    saveData.raceAttempts--;
+    if(saveData.raceAttempts === 2) {
+        saveData.raceCooldownStart = Date.now();
+    }
+    saveGame();
+    
+    isRacing = true;
+    raceDifficulty = diffKey;
+    raceTimer = 60.0;
+    racePlayerDistance = 0;
+    raceNpcDistance = 0;
+    playerRespawnTimer = 0;
+    npcCrashTimer = 0;
+    npcIsCrashed = false;
+    npcCrashDuration = 0;
+    
+    document.getElementById('raceHudOverlay').classList.remove('hidden');
+    startRun();
+}
+
+function startRun() {
+    if (!isRacing) {
+        playSound('click');
+        document.getElementById('raceHudOverlay').classList.add('hidden');
+    }
+    state = 'playing';
+    distance = 0; runTimer = 0; runCoins = 0; frameCoinsFraction = 0; visualShake = 0;
+    maxSpeedReached = 0;
+    entities = []; popups = []; meteors = [];
+    player.x = 0; targetX = 0; smoothRoll = 0;
+    nitroCharge = 0; isNitroActive = false; nitroTimer = 0;
+
+    const car = CARS[saveData.currentCar];
+    const upg = saveData.cars[saveData.currentCar].upgrades;
+
+    player.fuel = (CONFIG.baseFuel + (upg.fuel * CONFIG.upgrades.fuel.effect)) * car.mults.fuel;
+    player.tire = (CONFIG.baseTire + (upg.tires * CONFIG.upgrades.tires.effect)) * car.mults.tire;
+
+    roadsideScenery = [];
+    for (let i = 0; i < 150; i++) {
+        let side = Math.random() > 0.5 ? 1 : -1;
+        let minX = 135;
+        let maxX = 450;
+        let typeRand = Math.random();
+        let type = 'grass';
+        let scale = 0.5 + Math.random() * 0.9;
+        let color = '';
+
+        if (typeRand < 0.60) {
+            type = 'grass';
+            color = `hsl(${110 + Math.random() * 25}, 70%, ${18 + Math.random() * 12}%)`;
+        } else if (typeRand < 0.78) {
+            type = 'flower';
+            color = `hsl(${Math.random() * 360}, 90%, 65%)`;
+        } else if (typeRand < 0.90) {
+            type = 'pine';
+            color = `hsl(${125 + Math.random() * 20}, 75%, ${12 + Math.random() * 8}%)`;
+            scale = 0.8 + Math.random() * 0.8;
+        } else {
+            type = 'rock';
+            color = `hsl(${210 + Math.random() * 15}, 12%, ${28 + Math.random() * 18}%)`;
+            scale = 0.4 + Math.random() * 0.7;
+        }
+
+        roadsideScenery.push({
+            x: side * (minX + Math.random() * (maxX - minX)),
+            worldZ: Math.random() * 1180 + 20,
+            type: type, color: color, scale: scale,
+            swayOffset: Math.random() * Math.PI * 2
+        });
+    }
+
+    hideAllScreens();
+    els.hud.classList.remove('hidden');
+    updateNitroUI();
+}
+
+function showModal(title, desc, isGameOver, isRaceModal) {
+    state = isGameOver ? 'gameover' : 'paused';
+    document.getElementById('modalTitle').innerText = title;
+    document.getElementById('modalDesc').innerText = desc;
+    
+    const stats = document.getElementById('modalStats');
+    if (isGameOver) {
+        if (!isRaceModal) {
+            saveData.totalDistance += distance;
+            saveData.totalCoinsEarned += runCoins;
+            saveGame();
+            stats.classList.remove('hidden');
+            document.getElementById('statDist').innerText = Math.floor(distance);
+            document.getElementById('statCoins').innerText = runCoins;
+            document.getElementById('statSpeed').innerText = Math.floor(maxSpeedReached);
+            document.getElementById('btnPrimary').innerText = "Restart Run";
+            document.getElementById('btnPrimary').onclick = startRun;
+        } else {
+            stats.classList.add('hidden');
+            document.getElementById('btnPrimary').innerText = "To Race Lobby";
+            document.getElementById('btnPrimary').onclick = showRaceScreen;
+        }
+    } else {
+        stats.classList.add('hidden');
+        document.getElementById('btnPrimary').innerText = "Resume";
+        document.getElementById('btnPrimary').onclick = () => { playSound('click'); state = 'playing'; els.overlay.classList.add('hidden'); };
+    }
+    document.getElementById('btnSecondary').onclick = showGarage;
+    els.overlay.classList.remove('hidden');
+}
+
+function updatePhysics(dt) {
+    runTimer += dt;
+    
+    const car = CARS[saveData.currentCar];
+    const upg = saveData.cars[saveData.currentCar].upgrades;
+    const maxFuel = (CONFIG.baseFuel + (upg.fuel * CONFIG.upgrades.fuel.effect)) * car.mults.fuel;
+    const maxTire = (CONFIG.baseTire + (upg.tires * CONFIG.upgrades.tires.effect)) * car.mults.tire;
+    const baseTopSpeed = (CONFIG.baseSpeed + (upg.engine * CONFIG.upgrades.engine.effect)) * car.mults.speed;
+    const incomeMult = (1 + (upg.income * CONFIG.upgrades.income.effect)) * car.mults.income;
+
+    if (isRacing) {
+        raceTimer -= dt;
+        if (raceTimer <= 0) {
+            raceTimer = 0;
+            isRacing = false;
+            document.getElementById('raceHudOverlay').classList.add('hidden');
+            
+            let won = racePlayerDistance > raceNpcDistance;
+            if (won) {
+                let conf = RACE_CONFIGS[raceDifficulty];
+                let isFirst = saveData.raceWins[raceDifficulty] === 0;
+                let prize = isFirst ? conf.rewardFirst : conf.rewardNext;
+                saveData.coins += prize + runCoins;
+                saveData.raceWins[raceDifficulty]++;
+                saveGame();
+                showModal("VICTORY!", `You defeated the ${conf.name} NPC! Gained ${prize} ◈.`, true, true);
+            } else {
+                showModal("DEFEAT", "The rival crossed the line ahead of you. Gained 0 ◈.", true, true);
+            }
+            return;
+        }
+        
+        // NPC Behavior mechanics
+        const rCfg = RACE_CONFIGS[raceDifficulty];
+        npcCrashTimer += dt;
+        if (!npcIsCrashed && npcCrashTimer >= rCfg.crashInterval) {
+            npcIsCrashed = true;
+            npcCrashDuration = 3.0;
+            npcCrashTimer = 0;
+        }
+        if (npcIsCrashed) {
+            npcCrashDuration -= dt;
+            if (npcCrashDuration <= 0) npcIsCrashed = false;
+        }
+        
+        let currentNpcSpeed = npcIsCrashed ? 0 : rCfg.npcSpeed;
+        raceNpcDistance += (currentNpcSpeed * dt) / 10;
+        
+        // Player Respawn timer tracking
+        if (playerRespawnTimer > 0) {
+            playerRespawnTimer -= dt;
+            if (playerRespawnTimer <= 0) {
+                player.fuel = maxFuel;
+                player.tire = maxTire;
+            }
+        }
+    }
+
+    const diffConfig = DIFF_SETTINGS[currentDiff];
+    const difficultyTime = Math.min(3.5, 1.0 + (runTimer / 60.0));
+
+    // Nitro Logic
+    if (isNitroActive) {
+        nitroTimer -= dt;
+        nitroCharge -= (100 / 4) * dt; 
+        if (nitroTimer <= 0 || nitroCharge <= 0) {
+            isNitroActive = false;
+            nitroCharge = 0;
+            updateNitroUI();
+        }
+    }
+    
+    let magnetRadius = 40 + (upg.magnet * CONFIG.upgrades.magnet.effect);
+    if(isNitroActive) magnetRadius *= 2.5;
+
+    const isDamaged = player.tire < (maxTire * 0.2);
+    let speed = (isDamaged ? baseTopSpeed * 0.5 : baseTopSpeed) * difficultyTime * diffConfig.speedMult;
+    if (isNitroActive) speed *= 1.8;
+
+    // Force zero player forward speed progression while dead in a competition
+    if (isRacing && playerRespawnTimer > 0) {
+        speed = 0;
+    }
+
+    if (speed > maxSpeedReached) maxSpeedReached = speed;
+
+    let moveDiff = (targetX - player.x);
+    player.x += moveDiff * 8 * dt;
+    player.x = Math.max(CONFIG.laneLimits.min, Math.min(CONFIG.laneLimits.max, player.x));
+    smoothRoll += ((moveDiff * 0.15) - smoothRoll) * 10 * dt;
+
+    if (playerRespawnTimer <= 0) {
+        player.fuel -= CONFIG.fuelDrain * dt * (isNitroActive ? 0.5 : 1); 
+        player.tire -= CONFIG.tireDrain * dt;
+    }
+
+    if (player.fuel <= 0 || player.tire <= 0) {
+        if (isRacing) {
+            if (playerRespawnTimer <= 0) {
+                playerRespawnTimer = 3.0;
+                playSound('crash');
+                addPopup("CRASHED! 3s RESPAWN", "#EF4444");
+            }
+        } else {
+            if (player.fuel <= 0) { showModal("SYSTEM OFFLINE", "Energy depleted", true, false); return; }
+            if (player.tire <= 0) { showModal("CRITICAL DAMAGE", "Hull destroyed", true, false); return; }
+        }
+    }
+
+    distance += (speed * dt) / 10;
+    if (isRacing) {
+        racePlayerDistance = distance;
+    }
+    
+    frameCoinsFraction += (speed * dt) * 0.005 * incomeMult * diffConfig.rewardMult;
+    if (frameCoinsFraction >= 1) {
+        let amt = Math.floor(frameCoinsFraction);
+        runCoins += amt; 
+        if (!isRacing) saveData.coins += amt;
+        frameCoinsFraction -= amt;
+    }
+
+    if (visualShake > 0) visualShake -= dt * 15;
+
+    updateScenery(dt, speed);
+    updateEntities(dt, speed, diffConfig, magnetRadius, incomeMult, maxFuel, maxTire);
+    updateMeteors(dt);
+
+    spawnTimer -= dt;
+    if (spawnTimer <= 0) {
+        spawnEntity(difficultyTime);
+        spawnTimer = (Math.random() * 0.4 + 0.3) / (speed > 0 ? (speed / 450) : 1);
+    }
+
+    popups.forEach(p => { p.life -= dt; p.y -= 40 * dt; });
+    popups = popups.filter(p => p.life > 0);
+
+    updateDOMHUD(maxFuel, maxTire);
+}
+
+function updateScenery(dt, speed) {
+    clouds.forEach(c => {
+        c.x += c.speed * dt * 0.6;
+        if (c.x > canvas.width + 150) {
+            c.x = -150;
+            c.y = 35 + Math.random() * 75;
+        }
+    });
+
+    roadsideScenery.forEach(e => {
+        e.worldZ -= speed * dt;
+        if (e.worldZ < 15) {
+            e.worldZ = 1200 + (Math.random() * 40 - 20);
+            let side = Math.random() > 0.5 ? 1 : -1;
+            e.x = side * (135 + Math.random() * 245);
+        }
+    });
+}
+
+function updateMeteors(dt) {
+    if(Math.random() < 0.005) {
+        meteors.push({ x: Math.random() * canvas.width * 1.5, y: -50, speed: 200 + Math.random() * 300, angle: Math.PI/4 + Math.random()*0.2 });
+    }
+    for(let i=meteors.length-1; i>=0; i--) {
+        let m = meteors[i];
+        m.x -= Math.cos(m.angle) * m.speed * dt;
+        m.y += Math.sin(m.angle) * m.speed * dt;
+        if(m.y > canvas.height/2) meteors.splice(i, 1);
+    }
+}
+
+function updateEntities(dt, speed, diffConfig, magnetRadius, incomeMult, maxFuel, maxTire) {
+    for (let i = entities.length - 1; i >= 0; i--) {
+        let e = entities[i];
+        
+        if (e.isPickup && Math.hypot(e.x - player.x, e.worldZ - player.worldZ) < magnetRadius) {
+            e.x += (player.x - e.x) * 15 * dt; e.worldZ += (player.worldZ - e.worldZ) * 15 * dt;
+        }
+
+        let eSpeed = (e.type === 'traffic' ? (speed - 180 * diffConfig.speedMult) : speed);
+        e.worldZ -= eSpeed * dt;
+
+        let hitWidth = (e.type === 'obstacle' || e.type === 'traffic') ? 38 : 28;
+        if (Math.abs(e.worldZ - player.worldZ) < 18 && Math.abs(e.x - player.x) < hitWidth) {
+            if (playerRespawnTimer <= 0) {
+                resolveCollision(e, incomeMult, maxFuel, maxTire);
+            }
+            entities.splice(i, 1);
+            continue;
+        }
+
+        if (e.worldZ < -20) entities.splice(i, 1);
+    }
+}
+
+function spawnEntity(difficulty) {
+    const lanes = [-75, 0, 75];
+    
+    let objectsFarAway = entities.filter(e => e.worldZ > 1050);
+    let obstaclesInSlice = objectsFarAway.filter(e => !e.isPickup);
+    
+    if (obstaclesInSlice.length >= 2) {
+        let occupiedLanes = obstaclesInSlice.map(o => o.x);
+        let freeLanes = lanes.filter(l => !occupiedLanes.some(ol => Math.abs(ol - l) < 10));
+        if (freeLanes.length > 0 && Math.random() > 0.5) {
+            entities.push({ x: freeLanes[0], worldZ: 1200, w: 20, h: 20, isPickup: true, type: 'coin' });
+        }
+        return;
+    }
+
+    let lane = lanes[Math.floor(Math.random() * lanes.length)];
+    if (objectsFarAway.some(e => Math.abs(e.x - lane) < 10)) return;
+
+    let r = Math.random();
+    const spawnMult = currentDiff === 'easy' ? 1.5 : (currentDiff === 'hard' ? 0.5 : 1.0);
+    let hazardChance = Math.min(0.65, 0.35 + (difficulty * 0.05));
+    let pickupChance = 0.25 * spawnMult; 
+
+    if (r < hazardChance) {
+        entities.push({ x: lane, worldZ: 1200, w: 32, h: 24, isPickup: false, type: Math.random() > 0.5 ? 'obstacle' : 'traffic' });
+    } else if (r < hazardChance + pickupChance) {
+        let typeRand = Math.random();
+        let type = typeRand > 0.6 ? 'fuel' : (typeRand > 0.3 ? 'repair' : 'coin');
+        entities.push({ x: lane, worldZ: 1200, w: 20, h: 20, isPickup: true, type: type });
+    }
+}
+
+function resolveCollision(e, incomeMult, maxFuel, maxTire) {
+    if (e.isPickup) {
+        if (e.type === 'coin') {
+            playSound('coin');
+            let gain = Math.floor(5 * incomeMult * DIFF_SETTINGS[currentDiff].rewardMult);
+            runCoins += gain; 
+            if (!isRacing) saveData.coins += gain;
+            addPopup(`+${gain}`, "#60A5FA");
+            addNitro(5);
+        } else if (e.type === 'fuel') {
+            playSound('coin');
+            player.fuel = Math.min(maxFuel, player.fuel + (maxFuel * 0.3));
+            addPopup("+ENERGY", "#34D399");
+        } else if (e.type === 'repair') {
+            playSound('coin');
+            player.tire = Math.min(maxTire, player.tire + (maxTire * 0.3));
+            addPopup("+INTEGRITY", "#3B82F6");
+        }
+    } else {
+        playSound('crash');
+        let dmg = e.type === 'traffic' ? CONFIG.tirePenalty * 1.2 : CONFIG.tirePenalty;
+        if(isNitroActive) dmg *= 0.5; 
+        player.tire -= dmg; 
+        visualShake = 10; targetX = player.x + (player.x > e.x ? 35 : -35);
+        addPopup("DAMAGE", "#EF4444");
+    }
+}
+
+function addNitro(amount) {
+    if(isNitroActive) return;
+    nitroCharge = Math.min(100, nitroCharge + amount);
+}
+
+function activateNitro() {
+    if (nitroCharge >= 100 && !isNitroActive && state === 'playing' && playerRespawnTimer <= 0) {
+        playSound('nitro');
+        isNitroActive = true;
+        nitroTimer = 4.0;
+        visualShake = 5;
+    }
+}
+
+function updateNitroUI() {
+    let bar = document.getElementById('barNitro');
+    let btn = document.getElementById('btnNitro');
+    let ring = document.getElementById('nitroCircleProgress');
+    
+    bar.style.width = nitroCharge + '%';
+    
+    const circumference = 219.9;
+    const offset = circumference - (nitroCharge / 100) * circumference;
+    ring.style.strokeDashoffset = offset;
+    
+    if(!isNitroActive) {
+        btn.classList.remove('nitro-active');
+        if(nitroCharge >= 100) {
+            btn.classList.add('nitro-ready');
+        } else {
+            btn.classList.remove('nitro-ready');
+        }
+        btn.style.opacity = nitroCharge >= 100 ? '1' : '0.5';
+    } else {
+        btn.style.opacity = '1';
+    }
+}
+
+function addPopup(text, color) { popups.push({ text: text, color: color, life: 0.8, y: canvas.height / 2 - 50 }); }
+
+function project(worldX, worldZ, camX) {
+    let scale = focalLength / worldZ;
+    let curve = 0.00025 * (worldZ * worldZ); 
+    return { 
+        x: (canvas.width / 2) + (worldX - camX) * scale, 
+        y: dynamicHorizonY + (cameraHeight * scale) + curve, 
+        s: scale 
+    };
+}
+
+function drawStaticGrid() { ctx.fillStyle = "#040812"; ctx.fillRect(0, 0, canvas.width, canvas.height); }
+
+function draw() {
+    ctx.save();
+    if (visualShake > 0) ctx.translate((Math.random() - 0.5) * visualShake, (Math.random() - 0.5) * visualShake);
+    
+    let skyGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    skyGradient.addColorStop(0, "#010206"); 
+    skyGradient.addColorStop(0.35, "#060b1e");
+    skyGradient.addColorStop(0.5, "#0b0c2a");
+    skyGradient.addColorStop(1, "#040812");
+    ctx.fillStyle = skyGradient; 
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    if (cameraMode === '3d') render3D(); else renderTopDown();
+
+    if(isNitroActive && cameraMode === '3d') {
+        ctx.fillStyle = 'rgba(217, 70, 239, 0.05)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        ctx.strokeStyle = 'rgba(217, 70, 239, 0.4)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        for(let i=0; i<15; i++) {
+            let cx = canvas.width/2 + (Math.random()-0.5)*canvas.width*0.8;
+            let cy = canvas.height/2 + (Math.random()-0.5)*canvas.height*0.8;
+            let angle = Math.atan2(cy - canvas.height/2, cx - canvas.width/2);
+            ctx.moveTo(cx, cy);
+            ctx.lineTo(cx + Math.cos(angle)*100, cy + Math.sin(angle)*100);
+        }
+        ctx.stroke();
+    }
+
+    // Full screen overlay dark block for active competition respawn sequence
+    if (isRacing && playerRespawnTimer > 0) {
+        ctx.fillStyle = "rgba(4, 8, 18, 0.6)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "#f43f5e";
+        ctx.font = '900 24px "Inter", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(`RESPAWNING IN ${Math.ceil(playerRespawnTimer)}s`, canvas.width / 2, canvas.height / 2);
+    }
+
+    popups.forEach(p => {
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, p.life);
+        ctx.fillStyle = p.color;
+        ctx.font = '900 18px "Inter", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.shadowColor = 'black';
+        ctx.shadowBlur = 4;
+        ctx.fillText(p.text, canvas.width / 2, p.y);
+        ctx.restore();
+    });
+
+    ctx.restore();
+}
+
+function drawMountains(camX, color, heightOffset, speedFactor, amplitude) {
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(0, canvas.height);
+    for (let px = 0; px <= canvas.width + 15; px += 15) {
+        let worldX = px + camX * speedFactor + distance * speedFactor * 0.4;
+        let mountainY = dynamicHorizonY - heightOffset - Math.sin(worldX * 0.004) * amplitude - Math.cos(worldX * 0.012) * (amplitude * 0.35);
+        ctx.lineTo(px, mountainY);
+    }
+    ctx.lineTo(canvas.width, canvas.height);
+    ctx.closePath();
+    ctx.fill();
+}
+
+function render3D() {
+    let camX = player.x * 0.7;
+    let shift = (distance * 15) % 30;
+
+    stars.forEach(s => {
+        let screenX = (s.x * canvas.width - camX * 0.08) % canvas.width;
+        if (screenX < 0) screenX += canvas.width;
+        let screenY = s.y * dynamicHorizonY;
+        let flicker = s.alpha * (0.5 + 0.5 * Math.sin(runTimer * 3 + s.phase));
+        ctx.fillStyle = `rgba(255, 255, 255, ${flicker})`;
+        ctx.fillRect(screenX, screenY, s.size, s.size);
+    });
+    
+    ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+    ctx.lineWidth = 1.5;
+    meteors.forEach(m => {
+        ctx.beginPath();
+        ctx.moveTo(m.x, m.y);
+        ctx.lineTo(m.x + Math.cos(m.angle)*30, m.y - Math.sin(m.angle)*30);
+        ctx.stroke();
+    });
+
+    clouds.forEach(c => {
+        let screenX = (c.x - camX * 0.35) % (canvas.width + 300);
+        if (screenX < -150) screenX += (canvas.width + 300);
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+        ctx.beginPath();
+        ctx.arc(screenX, c.y, 25 * c.scale, 0, Math.PI * 2);
+        ctx.arc(screenX + 22 * c.scale, c.y - 12 * c.scale, 32 * c.scale, 0, Math.PI * 2);
+        ctx.arc(screenX + 48 * c.scale, c.y, 22 * c.scale, 0, Math.PI * 2);
+        ctx.arc(screenX + 26 * c.scale, c.y + 10 * c.scale, 24 * c.scale, 0, Math.PI * 2);
+        ctx.fill();
+    });
+
+    drawMountains(camX, "#030612", 40, 0.08, 45); 
+    drawMountains(camX, "#061022", 15, 0.22, 28); 
+
+    let fogGlow = ctx.createLinearGradient(0, dynamicHorizonY - 40, 0, dynamicHorizonY + 15);
+    fogGlow.addColorStop(0, "rgba(6, 16, 34, 0)");
+    fogGlow.addColorStop(0.7, "rgba(59, 130, 246, 0.15)");
+    fogGlow.addColorStop(1, "rgba(6, 16, 34, 0)");
+    ctx.fillStyle = fogGlow;
+    ctx.fillRect(0, dynamicHorizonY - 40, canvas.width, 55);
+
+    entities.sort((a, b) => b.worldZ - a.worldZ);
+
+    for (let z = 1200; z > 15; z -= 30) {
+        let absZ = z + shift;
+        let pNear = project(0, absZ - 30, camX);
+        let isEven = Math.floor((distance * 1.5 + (1200 - z)) / 60) % 2 === 0;
+
+        let wFarL = project(-115, absZ, camX); let wFarR = project(115, absZ, camX);
+        let wNearL = project(-115, absZ - 30, camX); let wNearR = project(115, absZ - 30, camX);
+
+        ctx.fillStyle = isEven ? "#042215" : "#062f1d";
+        ctx.beginPath();
+        ctx.moveTo(0, wFarL.y); ctx.lineTo(wFarL.x, wFarL.y);
+        ctx.lineTo(wNearL.x, wNearL.y); ctx.lineTo(0, wNearL.y); ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(canvas.width, wFarR.y); ctx.lineTo(wFarR.x, wFarR.y);
+        ctx.lineTo(wNearR.x, wNearR.y); ctx.lineTo(canvas.width, wNearR.y); ctx.fill();
+
+        ctx.fillStyle = isEven ? "#0f172a" : "#131c33";
+        ctx.beginPath(); ctx.moveTo(wFarL.x, wFarL.y); ctx.lineTo(wFarR.x, wFarR.y);
+        ctx.lineTo(wNearR.x, wNearR.y); ctx.lineTo(wNearL.x, wNearL.y); ctx.fill();
+
+        let kerbColor = isEven ? "#ef4444" : "#ffffff";
+        let kwFarL = project(-124, absZ, camX); let kwNearL = project(-124, absZ - 30, camX);
+        let kwFarR = project(124, absZ, camX); let kwNearR = project(124, absZ - 30, camX);
+
+        ctx.fillStyle = kerbColor;
+        ctx.beginPath();
+        ctx.moveTo(kwFarL.x, kwFarL.y); ctx.lineTo(wFarL.x, wFarL.y);
+        ctx.lineTo(wNearL.x, wNearL.y); ctx.lineTo(kwNearL.x, kwNearL.y); ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(wFarR.x, wFarR.y); ctx.lineTo(kwFarR.x, kwFarR.y);
+        ctx.lineTo(kwNearR.x, kwNearR.y); ctx.lineTo(wNearR.x, wNearR.y); ctx.fill();
+
+        let isLineSegment = Math.floor((distance * 2.2 + (1200 - absZ)) / 40) % 2 === 0;
+        if (isLineSegment) {
+            ctx.strokeStyle = "rgba(96, 165, 250, 0.4)"; ctx.lineWidth = Math.max(1, pNear.s * 1.5);
+            let pL1 = project(-37.5, absZ, camX); let pL2 = project(-37.5, absZ - 15, camX);
+            ctx.beginPath(); ctx.moveTo(pL1.x, pL1.y); ctx.lineTo(pL2.x, pL2.y); ctx.stroke();
+            let pR1 = project(37.5, absZ, camX); let pR2 = project(37.5, absZ - 15, camX);
+            ctx.beginPath(); ctx.moveTo(pR1.x, pR1.y); ctx.lineTo(pR2.x, pR2.y); ctx.stroke();
+        }
+
+        let sliceScenery = roadsideScenery.filter(e => e.worldZ <= absZ && e.worldZ > absZ - 30);
+        sliceScenery.forEach(e => {
+            let p = project(e.x, e.worldZ, camX);
+            if (p.s <= 0 || p.x < -100 || p.x > canvas.width + 100) return; 
+
+            ctx.save();
+            ctx.translate(p.x, p.y);
+            let s = p.s * e.scale;
+
+            if (e.type === 'grass') {
+                let sway = Math.sin(runTimer * 5.5 + e.swayOffset) * 6 * s;
+                ctx.strokeStyle = e.color;
+                ctx.lineWidth = Math.max(1.2, 2.5 * s);
+                ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(-10 * s, -14 * s, -15 * s + sway, -30 * s);
+                ctx.moveTo(0, 0); ctx.quadraticCurveTo(0, -18 * s, sway, -40 * s);
+                ctx.moveTo(0, 0); ctx.quadraticCurveTo(10 * s, -14 * s, 15 * s + sway, -30 * s); ctx.stroke();
+            } else if (e.type === 'flower') {
+                let sway = Math.sin(runTimer * 4.5 + e.swayOffset) * 4 * s;
+                ctx.strokeStyle = '#15803d'; ctx.lineWidth = Math.max(1, 1.8 * s);
+                ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(sway * 0.5, -12 * s, sway, -26 * s); ctx.stroke();
+                ctx.fillStyle = e.color; ctx.beginPath(); ctx.arc(sway, -26 * s, 6 * s, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#fef08a'; ctx.beginPath(); ctx.arc(sway, -26 * s, 2.5 * s, 0, Math.PI * 2); ctx.fill();
+            } else if (e.type === 'pine') {
+                ctx.fillStyle = '#451a03'; ctx.fillRect(-4 * s, 0, 8 * s, 14 * s);
+                ctx.fillStyle = e.color;
+                for (let l = 0; l < 3; l++) {
+                    let yPos = -10 * s - l * 13 * s;
+                    let pw = (22 - l * 5) * s; let ph = (16 - l * 2) * s;
+                    ctx.beginPath(); ctx.moveTo(0, yPos - ph); ctx.lineTo(-pw, yPos); ctx.lineTo(pw, yPos); ctx.closePath(); ctx.fill();
+                }
+            } else if (e.type === 'rock') {
+                ctx.fillStyle = e.color;
+                let w = 24 * s; let h = 18 * s;
+                ctx.beginPath(); ctx.moveTo(-w, 0); ctx.lineTo(-w * 0.8, -h * 0.8); ctx.lineTo(0, -h); ctx.lineTo(w * 0.7, -h * 0.9); ctx.lineTo(w, 0); ctx.closePath(); ctx.fill();
+                ctx.fillStyle = 'rgba(255,255,255,0.07)';
+                ctx.beginPath(); ctx.moveTo(0, -h); ctx.lineTo(w * 0.7, -h * 0.9); ctx.lineTo(w, 0); ctx.lineTo(0, 0); ctx.closePath(); ctx.fill();
+            }
+            ctx.restore();
+        });
+
+        let sliceEntities = entities.filter(e => e.worldZ <= absZ && e.worldZ > absZ - 30);
+        sliceEntities.forEach(e => {
+            let p = project(e.x, e.worldZ, camX);
+            if (p.s <= 0) return;
+            
+            ctx.save(); ctx.translate(p.x, p.y);
+            let w = e.w * p.s, h = e.h * p.s;
+            
+            if (e.type === 'coin') {
+                let bounce = Math.sin(runTimer*10 + e.worldZ)*5*p.s;
+                ctx.translate(0, bounce);
+                ctx.fillStyle = "#F59E0B"; ctx.beginPath(); ctx.arc(0, -h/2, w/2, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = "#FCD34D"; ctx.beginPath(); ctx.arc(0, -h/2, w/2.8, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = "#FEF3C7"; ctx.beginPath(); ctx.arc(0, -h/2, w/6, 0, Math.PI*2); ctx.fill();
+            } else if (e.type === 'fuel') {
+                ctx.fillStyle = "#059669"; ctx.beginPath(); ctx.roundRect(-w/2, -h, w, h, 3*p.s); ctx.fill();
+                ctx.fillStyle = "#10B981"; ctx.fillRect(-w*0.3, -h*0.8, w*0.6, h*0.6);
+                ctx.fillStyle = "#A7F3D0"; ctx.fillRect(-w*0.15, -h*0.6, w*0.3, h*0.2);
+                ctx.fillStyle = "#D1D5DB"; ctx.beginPath(); ctx.roundRect(-w*0.2, -h-2*p.s, w*0.4, 3*p.s, 1*p.s); ctx.fill();
+            } else if (e.type === 'repair') {
+                ctx.fillStyle = "#2563EB"; ctx.beginPath(); ctx.roundRect(-w/2, -h, w, h, 3*p.s); ctx.fill();
+                ctx.fillStyle = "#60A5FA"; ctx.fillRect(-w/2, -h*0.6, w, h*0.3);
+                ctx.fillStyle = "#F8FAFC"; ctx.fillRect(-w*0.15, -h*0.65, w*0.3, h*0.15);
+                ctx.strokeStyle = "#94A3B8"; ctx.lineWidth = Math.max(1, 2*p.s);
+                ctx.beginPath(); ctx.moveTo(-w*0.2, -h); ctx.lineTo(-w*0.2, -h-3*p.s); ctx.lineTo(w*0.2, -h-3*p.s); ctx.lineTo(w*0.2, -h); ctx.stroke();
+            } else if (e.type === 'obstacle') {
+                ctx.fillStyle = "#eab308"; ctx.beginPath(); ctx.roundRect(-w/2, -h, w, h, 3*p.s); ctx.fill();
+                ctx.fillStyle = "#1e293b";
+                ctx.beginPath(); ctx.moveTo(-w/2, -h*0.2); ctx.lineTo(-w*0.1, -h); ctx.lineTo(w*0.3, -h); ctx.lineTo(-w/2, -h*0.5);
+                ctx.moveTo(w*0.1, -h*0.2); ctx.lineTo(w*0.5, -h); ctx.lineTo(w/2, -h*0.5); ctx.lineTo(w*0.5, -h*0.2); ctx.fill();
+                ctx.fillStyle = "#ef4444"; ctx.beginPath(); ctx.arc(-w*0.3, -h, 3*p.s, 0, Math.PI*2); ctx.arc(w*0.3, -h, 3*p.s, 0, Math.PI*2); ctx.fill();
+            } else if (e.type === 'traffic') {
+                ctx.fillStyle = "rgba(0,0,0,0.4)"; ctx.beginPath(); ctx.roundRect(-w/2, -h*0.1, w, h*0.2, 2*p.s); ctx.fill();
+                ctx.fillStyle = "#334155"; ctx.beginPath(); ctx.roundRect(-w/2, -h, w, h*0.95, 4*p.s); ctx.fill();
+                ctx.fillStyle = "#1e293b"; ctx.fillRect(-w/2, -h*0.3, w, h*0.25);
+                ctx.fillStyle = "#0f172a"; ctx.beginPath(); ctx.roundRect(-w*0.35, -h*0.8, w*0.7, h*0.3, 2*p.s); ctx.fill();
+                ctx.fillStyle = "#ef4444"; ctx.beginPath(); ctx.roundRect(-w*0.4, -h*0.25, w*0.2, h*0.12, 1*p.s); ctx.fill();
+                ctx.beginPath(); ctx.roundRect(w*0.2, -h*0.25, w*0.2, h*0.12, 1*p.s); ctx.fill();
+                ctx.fillStyle = "rgba(239, 68, 68, 0.4)"; ctx.beginPath(); ctx.arc(-w*0.3, -h*0.19, w*0.25, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.arc(w*0.3, -h*0.19, w*0.25, 0, Math.PI*2); ctx.fill();
+            }
+            ctx.restore();
+        });
+    }
+
+    let fogGradient = ctx.createLinearGradient(0, dynamicHorizonY - 60, 0, dynamicHorizonY + 80);
+    fogGradient.addColorStop(0, "#080c1e"); fogGradient.addColorStop(1, "transparent");
+    ctx.fillStyle = fogGradient; ctx.fillRect(0, dynamicHorizonY - 60, canvas.width, 140);
+
+    // 3D Rendering of the Semi-Transparent NPC rival opponent vehicle
+    if (isRacing) {
+        let npcRelDist = raceNpcDistance - racePlayerDistance;
+        let npcWorldZ = npcRelDist * 10 + player.worldZ;
+        if (npcWorldZ > 15 && npcWorldZ < 1200) {
+            let nProj = project(45, npcWorldZ, camX);
+            if (nProj.s > 0) {
+                ctx.save();
+                ctx.globalAlpha = 0.45; 
+                ctx.translate(nProj.x, nProj.y);
+                let nw = 30 * nProj.s, nh = 18 * nProj.s;
+                ctx.fillStyle = CARS[RACE_CONFIGS[raceDifficulty].npcCar].color;
+                ctx.beginPath(); ctx.roundRect(-nw/2, -nh, nw, nh, 5 * nProj.s); ctx.fill();
+                ctx.fillStyle = "#020617"; ctx.beginPath(); ctx.roundRect(-nw*0.35, -nh*0.8, nw*0.7, nh*0.3, 2 * nProj.s); ctx.fill();
+                
+                ctx.globalAlpha = 1.0;
+                ctx.fillStyle = "#f43f5e";
+                ctx.font = `bold ${Math.max(10, 12 * nProj.s)}px "Inter", sans-serif`;
+                ctx.textAlign = "center";
+                ctx.fillText(RACE_CONFIGS[raceDifficulty].name, 0, -nh - 6);
+                ctx.restore();
+            }
+        }
+    }
+
+    if (playerRespawnTimer <= 0) {
+        let pProj = project(player.x, player.worldZ, camX);
+        let pw = 30 * pProj.s; let ph = 18 * pProj.s; 
+        let roll = smoothRoll; 
+
+        ctx.save(); ctx.translate(pProj.x, pProj.y); ctx.rotate(roll * Math.PI / 180);
+        
+        if(isNitroActive) {
+            ctx.fillStyle = "#d946ef"; 
+            ctx.beginPath();
+            ctx.moveTo(-pw*0.4, 0);
+            ctx.lineTo(-pw*0.2, ph*0.8 + Math.random()*ph);
+            ctx.lineTo(0, ph*0.3);
+            ctx.lineTo(pw*0.2, ph*0.8 + Math.random()*ph);
+            ctx.lineTo(pw*0.4, 0);
+            ctx.fill();
+        }
+
+        ctx.fillStyle = CARS[saveData.currentCar].color; 
+        ctx.beginPath(); ctx.roundRect(-pw/2, -ph, pw, ph, 5 * pProj.s); ctx.fill();
+        ctx.fillStyle = "#020617"; ctx.beginPath(); ctx.roundRect(-pw*0.35, -ph*0.8, pw*0.7, ph*0.3, 2 * pProj.s); ctx.fill();
+        ctx.fillStyle = "#0f172a"; ctx.beginPath(); ctx.roundRect(-pw*0.3, -ph*0.5, pw*0.6, ph*0.3, 2 * pProj.s); ctx.fill();
+        ctx.fillStyle = "#EF4444"; ctx.beginPath(); ctx.roundRect(-pw*0.45, -ph*0.2, pw*0.2, ph*0.1, 1 * pProj.s); ctx.fill();
+        ctx.beginPath(); ctx.roundRect(pw*0.25, -ph*0.2, pw*0.2, ph*0.1, 1 * pProj.s); ctx.fill();
+        if(state === 'playing') {
+            ctx.fillStyle = "rgba(239, 68, 68, 0.5)";
+            ctx.beginPath(); ctx.arc(-pw*0.35, -ph*0.15, pw*0.25, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(pw*0.35, -ph*0.15, pw*0.25, 0, Math.PI*2); ctx.fill();
+        }
+        ctx.restore();
+    }
+}
+
+function renderTopDown() {
+    let rw = 250, rx = (canvas.width - rw) / 2;
+    
+    ctx.fillStyle = "#042215"; 
+    ctx.fillRect(0, 0, rx, canvas.height); ctx.fillRect(rx + rw, 0, canvas.width - (rx + rw), canvas.height);
+    ctx.fillStyle = "#0a101d"; ctx.fillRect(rx, 0, rw, canvas.height);
+
+    ctx.strokeStyle = "rgba(255,255,255,0.08)";
+    ctx.lineWidth = 2; ctx.setLineDash([30, 30]);
+    let ls = (distance * 6) % 60;
+    
+    ctx.beginPath();
+    ctx.moveTo(rx + rw/3, -60 + ls); ctx.lineTo(rx + rw/3, canvas.height + 60);
+    ctx.moveTo(rx + (rw/3)*2, -60 + ls); ctx.lineTo(rx + (rw/3)*2, canvas.height + 60);
+    ctx.stroke(); ctx.setLineDash([]);
+
+    roadsideScenery.forEach(e => {
+        let sx = canvas.width / 2 + e.x;
+        let sy = canvas.height * 0.82 - (e.worldZ - player.worldZ) * 1.3;
+        if (sy < -50 || sy > canvas.height + 50) return;
+        
+        ctx.save(); ctx.translate(sx, sy);
+        ctx.fillStyle = e.color;
+        if (e.type === 'rock') {
+            ctx.beginPath(); ctx.arc(0, 0, 4 * e.scale, 0, Math.PI * 2); ctx.fill();
+        } else if (e.type === 'pine') {
+            ctx.beginPath(); ctx.arc(0, 0, 7 * e.scale, 0, Math.PI * 2); ctx.fill();
+        } else { ctx.fillRect(-2 * e.scale, -2 * e.scale, 4 * e.scale, 4 * e.scale); }
+        ctx.restore();
+    });
+
+    entities.forEach(e => {
+        let sx = canvas.width / 2 + e.x;
+        let sy = canvas.height * 0.82 - (e.worldZ - player.worldZ) * 1.3;
+        if (sy < -50 || sy > canvas.height + 50) return;
+
+        ctx.save(); ctx.translate(sx, sy);
+        if (e.type === 'coin') {
+            ctx.fillStyle = "#F59E0B"; ctx.beginPath(); ctx.arc(0, 0, 8, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = "#FCD34D"; ctx.beginPath(); ctx.arc(0, 0, 5, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = "#FEF3C7"; ctx.beginPath(); ctx.arc(0, 0, 2, 0, Math.PI*2); ctx.fill();
+        } else if (e.type === 'fuel') {
+            ctx.fillStyle = "#059669"; ctx.beginPath(); ctx.roundRect(-8, -8, 16, 16, 3); ctx.fill();
+            ctx.fillStyle = "#10B981"; ctx.fillRect(-5, -5, 10, 10);
+        } else if (e.type === 'repair') {
+            ctx.fillStyle = "#2563EB"; ctx.beginPath(); ctx.roundRect(-8, -8, 16, 16, 3); ctx.fill();
+            ctx.fillStyle = "#60A5FA"; ctx.fillRect(-8, -3, 16, 6);
+        } else if (e.type === 'obstacle') {
+            ctx.fillStyle = "#eab308"; ctx.beginPath(); ctx.roundRect(-16, -12, 32, 24, 2); ctx.fill();
+            ctx.fillStyle = "#1e293b"; ctx.fillRect(-10, -12, 6, 24); ctx.fillRect(4, -12, 6, 24);
+            ctx.fillStyle = "#ef4444"; ctx.beginPath(); ctx.arc(-10, -10, 3, 0, Math.PI*2); ctx.arc(10, -10, 3, 0, Math.PI*2); ctx.fill();
+        } else if (e.type === 'traffic') {
+            ctx.fillStyle = "#1e293b"; ctx.beginPath(); ctx.roundRect(-16, -24, 32, 48, 6); ctx.fill();
+            ctx.fillStyle = "#334155"; ctx.beginPath(); ctx.roundRect(-14, -22, 28, 44, 4); ctx.fill();
+            ctx.fillStyle = "#0f172a"; ctx.fillRect(-12, -12, 24, 18);
+            ctx.fillStyle = "#ef4444"; ctx.fillRect(-12, 18, 6, 4); ctx.fillRect(6, 18, 6, 4);
+        }
+        ctx.restore();
+    });
+
+    // Top-down visualization structure for NPC opponent vehicle positioning
+    if (isRacing) {
+        let sx = canvas.width / 2 + 45;
+        let sy = canvas.height * 0.82 - (raceNpcDistance - racePlayerDistance) * 1.3;
+        if (sy > -50 && sy < canvas.height + 50) {
+            ctx.save();
+            ctx.globalAlpha = 0.45;
+            ctx.translate(sx, sy);
+            ctx.fillStyle = CARS[RACE_CONFIGS[raceDifficulty].npcCar].color;
+            ctx.beginPath(); ctx.roundRect(-14, -24, 28, 48, 6); ctx.fill();
+            ctx.fillStyle = "#0f172a"; ctx.fillRect(-10, -10, 20, 14);
+            
+            ctx.globalAlpha = 1.0;
+            ctx.fillStyle = "#FFFFFF";
+            ctx.font = 'bold 10px "Inter", sans-serif';
+            ctx.textAlign = "center";
+            ctx.fillText(RACE_CONFIGS[raceDifficulty].name, 0, -30);
+            ctx.restore();
+        }
+    }
+
+    if (playerRespawnTimer <= 0) {
+        let px = canvas.width / 2 + player.x;
+        ctx.save(); ctx.translate(px, canvas.height * 0.82);
+        ctx.rotate(smoothRoll * Math.PI / 180);
+        
+        if(isRacing && isNitroActive || !isRacing && isNitroActive) {
+            ctx.fillStyle = "#d946ef"; 
+            ctx.beginPath(); ctx.moveTo(-8, 24); ctx.lineTo(0, 40+Math.random()*15); ctx.lineTo(8, 24); ctx.fill();
+        }
+        
+        ctx.fillStyle = CARS[saveData.currentCar].color; 
+        ctx.beginPath(); ctx.roundRect(-14, -24, 28, 48, 6); ctx.fill();
+        ctx.fillStyle = "#0f172a"; ctx.fillRect(-10, -10, 20, 14); 
+        ctx.fillStyle = "#EF4444"; ctx.fillRect(-12, 20, 6, 3); ctx.fillRect(6, 20, 6, 3);
+        ctx.restore();
+    }
+}
+
+function updateDOMHUD(maxFuel, maxTire) {
+    document.getElementById('hudCoins').innerText = runCoins; 
+    document.getElementById('hudDist').innerText = Math.floor(distance) + ' m';
+    let fuelPct = Math.max(0, Math.min(100, (player.fuel / maxFuel) * 100));
+    let tirePct = Math.max(0, Math.min(100, (player.tire / maxTire) * 100));
+    document.getElementById('barFuel').style.width = fuelPct + '%';
+    document.getElementById('barTire').style.width = tirePct + '%';
+    document.getElementById('barFuel').style.backgroundColor = fuelPct < 25 ? '#ef4444' : '#34d399';
+    document.getElementById('barTire').style.backgroundColor = tirePct < 25 ? '#ef4444' : '#3b82f6';
+    
+    if (isRacing) {
+        document.getElementById('raceTimerText').innerText = raceTimer.toFixed(1) + 's';
+        document.getElementById('racePlayerDistText').innerText = Math.floor(racePlayerDistance) + 'm';
+        document.getElementById('raceNpcDistText').innerText = Math.floor(raceNpcDistance) + 'm';
+    }
+    updateNitroUI();
+}
+
+function renderVehicles() {
+    els.vehiclesList.innerHTML = '';
+    
+    for(let key in CARS) {
+        let c = CARS[key];
+        let sd = saveData.cars[key];
+        let isCurrent = saveData.currentCar === key;
+        
+        let card = document.createElement('div');
+        card.className = `bento-window p-4 flex flex-col transition-all border ${isCurrent ? 'border-blue-500 bg-blue-500/10' : 'border-white/10'}`;
+        
+        let btnHtml = '';
+        if (isCurrent) {
+            btnHtml = `<button class="w-full bg-blue-500/20 text-blue-400 font-bold py-3 rounded-xl cursor-default border border-blue-500/30">Selected</button>`;
+        } else if (sd.purchased) {
+            btnHtml = `<button onclick="selectOrBuyCar('${key}')" class="w-full bento-btn text-white font-bold py-3 rounded-xl hover:bg-white/10 active:scale-95">Select Vehicle</button>`;
+        } else {
+            let canAfford = saveData.coins >= c.price;
+            btnHtml = `<button onclick="selectOrBuyCar('${key}')" class="w-full font-bold py-3 rounded-xl transition-all active:scale-95 ${canAfford ? 'bg-blue-600 hover:bg-blue-500 text-white' : 'bg-white/5 text-slate-500 cursor-not-allowed'}">Buy for ${c.price} ◈</button>`;
+        }
+
+        card.innerHTML = `
+            <div class="flex justify-between items-center mb-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-8 rounded-lg shadow-inner" style="background-color: ${c.color}"></div>
+                    <span class="text-lg font-bold text-white">${c.name}</span>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3 mb-5 text-xs text-slate-300">
+                <div class="bg-black/30 p-2 rounded-lg flex justify-between border border-white/5">
+                    <span class="text-slate-500">Speed</span>
+                    <span class="font-bold text-white">x${c.mults.speed.toFixed(2)}</span>
+                </div>
+                <div class="bg-black/30 p-2 rounded-lg flex justify-between border border-white/5">
+                    <span class="text-slate-500">Income</span>
+                    <span class="font-bold text-yellow-400">x${c.mults.income.toFixed(2)}</span>
+                </div>
+                <div class="bg-black/30 p-2 rounded-lg flex justify-between border border-white/5">
+                    <span class="text-slate-500">Hull</span>
+                    <span class="font-bold text-blue-400">x${c.mults.tire.toFixed(2)}</span>
+                </div>
+                <div class="bg-black/30 p-2 rounded-lg flex justify-between border border-white/5">
+                    <span class="text-slate-500">Energy</span>
+                    <span class="font-bold text-emerald-400">x${c.mults.fuel.toFixed(2)}</span>
+                </div>
+            </div>
+            ${btnHtml}
+        `;
+        
+        els.vehiclesList.appendChild(card);
+    }
+}
+
+function renderQuests() {
+    els.questsList.innerHTML = '';
+    
+    QUESTS.forEach(q => {
+        let isClaimed = saveData.claimedQuests.includes(q.id);
+        let current = q.type === 'distance' ? saveData.totalDistance : saveData.totalCoinsEarned;
+        let progressPct = Math.min(100, (current / q.target) * 100);
+        let isComplete = progressPct >= 100;
+        
+        let card = document.createElement('div');
+        card.className = `bento-window p-4 flex flex-col transition-all ${isClaimed ? 'opacity-50 grayscale' : ''}`;
+        
+        let formatVal = val => Math.floor(val).toLocaleString();
+        
+        let btnHtml = '';
+        if (isClaimed) {
+            btnHtml = `<button class="px-4 py-2 bg-white/5 text-slate-500 font-bold rounded-xl cursor-not-allowed text-xs uppercase tracking-wider">Claimed</button>`;
+        } else if (isComplete) {
+            btnHtml = `<button onclick="claimQuest('${q.id}', ${q.reward})" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-white font-bold rounded-xl transition-all shadow-[0_0_15px_rgba(16,185,129,0.3)] active:scale-95 text-xs uppercase tracking-wider">Claim Reward</button>`;
+        } else {
+            btnHtml = `<div class="px-4 py-2 text-slate-500 font-bold rounded-xl border border-white/5 bg-black/20 text-xs text-center flex-grow flex justify-center items-center gap-1">+${formatVal(q.reward)} ◈</div>`;
+        }
+
+        card.innerHTML = `
+            <div class="mb-3">
+                <h3 class="text-sm font-bold text-white mb-1">${q.desc}</h3>
+                <p class="text-[10px] text-slate-400">Progress: ${progressPct.toFixed(1)}% (${formatVal(current)} / ${formatVal(q.target)})</p>
+            </div>
+            
+            <div class="w-full bg-black/50 rounded-full h-2.5 mb-4 overflow-hidden border border-white/5">
+                <div class="h-2.5 rounded-full transition-all duration-500 ${isComplete ? 'bg-emerald-400' : 'bg-blue-500'}" style="width: ${progressPct}%"></div>
+            </div>
+            
+            <div class="flex gap-3">
+                ${btnHtml}
+            </div>
+        `;
+        
+        els.questsList.appendChild(card);
+    });
+}
+
+function renderRaceDifficulties() {
+    const container = document.getElementById('raceDifficultyList');
+    container.innerHTML = '';
+    
+    for (let key in RACE_CONFIGS) {
+        let r = RACE_CONFIGS[key];
+        let winCount = saveData.raceWins[key] || 0;
+        let isFirstTime = winCount === 0;
+        let prize = isFirstTime ? r.rewardFirst : r.rewardNext;
+        let oppVehicleName = CARS[r.npcCar].name;
+        
+        let card = document.createElement('div');
+        card.className = "bento-window p-4 flex flex-col justify-between border border-white/5 bg-white/[0.02]";
+        
+        let buttonDisabled = saveData.raceAttempts <= 0;
+        let actionBtnClass = buttonDisabled 
+            ? "bg-white/5 text-slate-500 cursor-not-allowed" 
+            : "bg-fuchsia-600 hover:bg-fuchsia-500 text-white shadow-[0_4px_15px_rgba(217,70,239,0.3)] active:scale-[0.97]";
+
+        card.innerHTML = `
+            <div class="flex justify-between items-start mb-2">
+                <div>
+                    <h3 class="text-md font-bold text-white uppercase tracking-wide">${r.name} Competition</h3>
+                    <p class="text-[10px] text-slate-400 mt-0.5">Rival Car: <span class="text-slate-300 font-semibold">${oppVehicleName}</span></p>
+                </div>
+                <span class="text-[9px] font-black tracking-widest px-2 py-0.5 rounded bg-black/40 text-fuchsia-400 border border-fuchsia-500/10 uppercase">${key}</span>
+            </div>
+            
+            <div class="flex justify-between items-center my-3 text-xs bg-black/30 px-3 py-2 rounded-xl border border-white/5">
+                <span class="text-slate-500 uppercase tracking-wider text-[10px]">Win Reward</span>
+                <span class="font-bold text-yellow-400 flex items-center gap-1">
+                    ${prize} ◈ <span class="text-[9px] font-normal text-slate-500">(${isFirstTime ? 'First Win' : 'Repeat'})</span>
+                </span>
+            </div>
+            
+            <button onclick="startNpcRace('${key}')" ${buttonDisabled ? 'disabled' : ''} class="w-full py-3 rounded-xl font-bold text-xs tracking-wider uppercase transition-all ${actionBtnClass}">
+                Launch Competition
+            </button>
+        `;
+        container.appendChild(card);
+    }
+}
+
+function claimQuest(id, reward) {
+    if (saveData.claimedQuests.includes(id)) return;
+    playSound('coin');
+    saveData.coins += reward;
+    saveData.claimedQuests.push(id);
+    saveGame();
+    renderQuests(); 
+}
+
+function selectOrBuyCar(key) {
+    playSound('click');
+    if(saveData.cars[key].purchased) {
+        saveData.currentCar = key;
+        saveGame(); renderVehicles();
+    } else {
+        let price = CARS[key].price;
+        if(saveData.coins >= price) {
+            saveData.coins -= price;
+            saveData.cars[key].purchased = true;
+            saveData.currentCar = key;
+            saveGame(); renderVehicles();
+        }
+    }
+}
+
+function renderGarageUpgrades() {
+    els.upgrades.innerHTML = '';
+    for (let key in CONFIG.upgrades) {
+        let upg = CONFIG.upgrades[key];
+        let lvl = saveData.cars[saveData.currentCar].upgrades[key]; 
+        let cost = Math.floor(upg.baseCost * Math.pow(upg.scale, lvl));
+        let canAfford = saveData.coins >= cost;
+        
+        let card = document.createElement('div');
+        card.className = `bento-window p-3 flex flex-col justify-between transition-all ${upg.colSpan ? 'col-span-2 flex-row items-center py-3' : 'aspect-square'} ${canAfford ? 'cursor-pointer hover:bg-white/5' : 'opacity-60 grayscale'}`;
+        
+        card.onclick = () => {
+            if (saveData.coins >= cost) {
+                playSound('coin');
+                saveData.coins -= cost; 
+                saveData.cars[saveData.currentCar].upgrades[key]++;
+                saveGame(); showGarage(); 
+            } else { playSound('crash'); }
+        };
+        
+        if (upg.colSpan) {
+            card.innerHTML = `
+                <div class="flex items-center gap-3 w-full">
+                    <div class="flex-shrink-0">${upg.icon}</div>
+                    <div class="flex-grow"><p class="text-xs font-bold text-white">${upg.name}</p><p class="text-[9px] text-slate-400">Lvl ${lvl}</p></div>
+                    <div class="bg-black/40 rounded-xl px-3 py-1.5 text-xs font-bold ${canAfford ? 'text-blue-400' : 'text-slate-500'} border border-white/5 flex-shrink-0">${cost} ◈</div>
+                </div>
+            `;
+        } else {
+            card.innerHTML = `
+                <div class="w-full text-center flex flex-col justify-between h-full items-center">
+                    <div><p class="text-[10px] font-bold text-white truncate max-w-full leading-tight mb-0.5">${upg.name}</p><p class="text-[9px] text-slate-400">Lvl ${lvl}</p></div>
+                    <div class="my-auto flex items-center justify-center w-full py-1">${upg.icon}</div>
+                    <div class="w-full bg-black/40 rounded-xl py-1.5 text-xs font-bold ${canAfford ? 'text-blue-400' : 'text-slate-500'} border border-white/5">${cost} ◈</div>
+                </div>
+            `;
+        }
+        els.upgrades.appendChild(card);
+    }
+}
+
+function setupInput() {
+    const updateTarget = (clientX) => {
+        if (state !== 'playing' || playerRespawnTimer > 0) return;
+        let rect = canvas.getBoundingClientRect();
+        let scaleX = canvas.width / rect.width;
+        let x = (clientX - rect.left) * scaleX;
+        let pct = x / canvas.width;
+        targetX = CONFIG.laneLimits.min + (pct * (CONFIG.laneLimits.max - CONFIG.laneLimits.min));
+    };
+    
+    window.addEventListener('mousemove', e => updateTarget(e.clientX));
+    window.addEventListener('touchmove', e => { 
+        if(state==='playing' && e.target === canvas) {
+            e.preventDefault(); 
+            updateTarget(e.touches[0].clientX); 
+        }
+    }, { passive: false });
+    window.addEventListener('touchstart', e => { 
+        if(state==='playing' && e.target === canvas) updateTarget(e.touches[0].clientX); 
+    }, { passive: false });
+    
+    document.getElementById('btnNitro').addEventListener('touchstart', (e) => { e.preventDefault(); activateNitro(); });
+    document.getElementById('btnNitro').addEventListener('mousedown', (e) => { e.preventDefault(); activateNitro(); });
+    window.addEventListener('dblclick', () => { if(state === 'playing') activateNitro(); });
+}
+
+function setupButtons() {
+    document.getElementById('btnEnterEngine').onclick = () => {
+        initAudio();
+        playSound('click');
+        els.intro.classList.add('opacity-0', 'scale-110');
+        setTimeout(() => { 
+            els.intro.classList.add('hidden'); 
+            showGarage(); 
+        }, 600);
+    };
+
+    document.getElementById('btnStartGame').onclick = startRun;
+    document.getElementById('btnPause').onclick = () => { playSound('click'); showModal("PAUSED", "Systems on standby", false, isRacing); };
+    document.getElementById('btnToggleCamera').onclick = () => { playSound('click'); cameraMode = cameraMode === '3d' ? 'topdown' : '3d'; };
+}
+
+init();
+</script>
+</body>
+</html>
